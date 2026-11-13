@@ -1,0 +1,22 @@
+{
+  "name": "kubi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kubi, a Tamagotchi to learn Kubernetes with real kubectl commands (EN/FR)",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:artifact": "node scripts/build.mjs --artifact",
+    "lint": "npm run build && html-validate dist/index.html",
+    "test": "node --test",
+    "start": "npm run build && npx --yes serve@14.2.4 dist"
+  },
+  "devDependencies": {
+    "acorn": "^8.12.1",
+    "html-validate": "8.18.2",
+    "jsdom": "24.1.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
