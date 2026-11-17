@@ -10,7 +10,7 @@ const src = readFileSync(new URL('src/kubi.html', root), 'utf8');
 const dict = JSON.parse(readFileSync(new URL('i18n/en.json', root), 'utf8'));
 
 // Chaînes qui pilotent la logique du jeu : jamais traduites (valeurs de couleur, alias, noms de ressources).
-export const KEEP = new Set(['aide', 'couleur', 'rose', 'bleu', 'vert', 'jaune', 'violet', 'rouge', 'miam', 'nursery', 'none', 'free']);
+export const KEEP = new Set(['aide', 'couleur', 'rose', 'bleu', 'vert', 'jaune', 'violet', 'rouge', 'miam', 'monitoring', 'none', 'free']);
 // Indices qu'une chaîne est en français.
 export const FRENCH = /[àâçéèêëîïôûùüÿœæÀÂÇÉÈÊËÎÏÔÛÙÜŸŒ’«»]|\b(le|la|les|un|une|des|du|et|est|pour|avec|sans|pas|ton|ta|tes|son|sa|ses|il|elle|qui|que|dans|sur|tout|puis|ou|au|aux|ne|plus|nouveau|nouvelle|indice|commande|choisis|mission|chapitre|niveau|chambre|maison|visiteurs|dossier|fichier|taille|nom|jumeau|tape|introuvable|fais|rends|humeur|heureux|malade|triste|sale|dort|vide|crotte|copie)\b/i;
 
