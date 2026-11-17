@@ -8,10 +8,23 @@ A Tamagotchi to learn Kubernetes by typing real `kubectl` commands. **Available 
 
 | Level | Missions | Topics |
 | --- | --- | --- |
-| Beginner | 11 | Deployment, probes, Service, ConfigMap, Secret, rolling update, rollback |
-| Intermediate | 8 | Resources, nodes, drain, HPA, etcd, namespaces |
-| Expert | 8 | Gateway API, PDB, non-root, NetworkPolicy, RBAC, declarative config, Terraform + Argo CD |
+| Discovery | 12 | Deployment, probes, Service, ConfigMap, Secret, rolling update, rollback, then “The meeting”: a quiz on the team's jargon |
+| Intermediate | 9 | Resources, nodes, drain, HPA, etcd, namespaces, then the ops meeting |
+| Expert | 9 | Gateway API, PDB, non-root, NetworkPolicy, RBAC, declarative config, Terraform + Argo CD, then the security review |
 | Free play | 4 | No instructions, with hints: self-healing, new version, maintenance, security |
+| No safety net | 5 incidents | Unlocked after Free play: random failures to diagnose and fix, an SLA to hold (90%), hints that cost points |
+
+## Score
+
+Each guided level ends with a meeting and a score out of 100: the meeting (50 points) plus the shop's availability (50 points: 100% SLA is worth 50, 80% or less is worth 0). One to three stars, and a summary to copy.
+
+## Léa's shop
+
+Léa, a pastry chef, runs an online shop, and Kubi runs it for her: each Kubi is a shop assistant (a pod) working at a counter (a node), Kubo is the guard who watches them (a monitoring DaemonSet), and the stockroom is the database. Once Kubi has a public entrance (a LoadBalancer Service, later the Gateway), orders come in: the screen counts orders served and orders lost during outages, and Léa reacts in the terminal.
+
+## SLA
+
+Once Kubi has a public entrance, a synthetic probe knocks on his public entrance every second, like a real uptime monitor. The measured SLA shows on the device screen. A pod can be `Running` while visitors still get errors: the SLA is what users actually see.
 
 ## Language
 

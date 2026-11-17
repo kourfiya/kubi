@@ -37,7 +37,7 @@ const FR_WORDS = /[àâçéèêëîïôûùœ«»]|\b(le|la|les|une|des|est|pour
 function noFrench(w, where) {
   const body = w.document.body.cloneNode(true);
   body.querySelectorAll('script, template, #lang').forEach((n) => n.remove());
-  const text = body.textContent + ' ' + [...w.document.querySelectorAll('[aria-label]')].map((n) => n.getAttribute('aria-label')).join(' ');
+  const text = (body.textContent + ' ' + [...w.document.querySelectorAll('[aria-label]')].map((n) => n.getAttribute('aria-label')).join(' ')).replace(/Léa/g, 'Lea');
   const hits = [...new Set(text.match(FR_WORDS) || [])];
   if (hits.length) {
     const lines = text.split('\n').filter((l) => FR_WORDS.test(l)).slice(0, 5);
@@ -45,7 +45,7 @@ function noFrench(w, where) {
   }
 }
 
-function play(level, lang = 'fr') {
+function play(level, lang = 'fr', sf = false) {
   const { E, cmd, T, cur, first, term, w } = boot(level, lang);
   const COLOR = lang === 'en' ? 'color=purple' : 'couleur=violet';
   const plan={
@@ -56,7 +56,7 @@ scale:()=>{cmd('kubectl scale deployment kubi --replicas=3');T(4)},
 live:()=>{cmd('cat kubi-liveness-probe.yaml');cmd('kubectl apply -f kubi-liveness-probe.yaml');T(25)},
 oom:()=>{cmd('kubectl set resources deployment kubi --limits=memory=256Mi');T(30)},
 req:()=>{cmd('kubectl set resources deployment kubi --requests=memory=2Gi --limits=memory=2Gi');T(4);cmd('kubectl describe pod '+first("p=>p.st==='Pending'"));cmd('kubectl set resources deployment kubi --requests=memory=200Mi --limits=memory=256Mi');T(30)},
-expose:()=>{cmd('kubectl expose deployment kubi --port=80');cmd('kubectl get endpoints kubi')},
+expose:()=>{cmd('kubectl expose deployment kubi --port=80 --type=LoadBalancer');cmd('kubectl get endpoints kubi')},
 ready:()=>{cmd('kubectl apply -f kubi-readiness-probe.yaml');T(40)},
 config:()=>{cmd('kubectl create configmap kubi-config --from-literal='+COLOR);cmd('kubectl rollout restart deployment/kubi');T(40)},
 secret:()=>{cmd('kubectl create secret generic kubi-secret --from-literal=password=miam');cmd('kubectl get secret kubi-secret -o yaml');cmd('kubectl set env deployment/kubi --from=secret/kubi-secret');T(40)},
@@ -70,21 +70,31 @@ pdb:()=>{cmd('kubectl create pdb kubi --selector=app=kubi --min-available=2');cm
 drain:()=>{cmd('kubectl drain node-1 --ignore-daemonsets');for(let i=0;i<80&&!E('S.drained');i++)T(1);cmd('kubectl uncordon node-1')},
 hpa:()=>{cmd('kubectl autoscale deployment kubi --min=2 --max=5 --cpu-percent=50');T(6);cmd('kubectl get hpa');cmd('kubectl describe hpa kubi');cmd('kubectl set resources deployment kubi --requests=cpu=100m,memory=200Mi --limits=memory=256Mi');for(let i=0;i<120&&cur()==='hpa';i++)T(1)},
 gc:()=>{cmd('sed -i "s/--terminated-pod-gc-threshold=12500/--terminated-pod-gc-threshold=1/" /etc/kubernetes/manifests/kube-controller-manager.yaml');T(15)},
-ns:()=>{cmd('kubectl create namespace nursery');cmd('cat kubo-daemonset.yaml');cmd('kubectl apply -f kubo-daemonset.yaml');cmd('kubectl get daemonset -n nursery');T(3)},
-nsget:()=>{cmd('kubectl get pods -n nursery');cmd('kubectl get pods -A')},
+ns:()=>{cmd('kubectl create namespace monitoring');cmd('cat kubo-daemonset.yaml');cmd('kubectl apply -f kubo-daemonset.yaml');cmd('kubectl get daemonset -n monitoring');T(3)},
+nsget:()=>{cmd('kubectl get pods -n monitoring');cmd('kubectl get pods -A')},
 etcd:()=>{cmd('ETCDCTL_API=3 etcdctl snapshot save /backup/etcd.db');cmd('etcdutl snapshot status /backup/etcd.db')},
 nonroot:()=>{cmd('kubectl exec '+first("p=>p.st==='Running'")+' -- id');cmd('cat kubi-secure.yaml');cmd('kubectl apply -f kubi-secure.yaml');T(60);cmd('kubectl exec -it '+first("p=>p.sec&&p.st==='Running'")+' -- id')},
-netpol:()=>{const k=E('S.kubo.pods[0].name');cmd('kubectl exec -n nursery '+k+' -- curl kubi');cmd('kubectl exec -n nursery '+k+' -- curl kubi.default');cmd('kubectl apply -f kubi-netpol.yaml');cmd('kubectl exec -n nursery '+k+' -- curl kubi.default')},
-rbac:()=>{cmd('kubectl create serviceaccount kubo-watch -n nursery');cmd('kubectl create role pod-reader --verb=get,list --resource=pods');cmd('kubectl create rolebinding kubo-watch --role=pod-reader --serviceaccount=nursery:kubo-watch');cmd('kubectl auth can-i get pods --as=system:serviceaccount:nursery:kubo-watch');cmd('kubectl auth can-i get secrets --as=system:serviceaccount:nursery:kubo-watch');cmd('kubectl set serviceaccount daemonset/kubo kubo-watch -n nursery');T(3)},
+netpol:()=>{const k=E('S.kubo.pods[0].name');cmd('kubectl exec -n monitoring '+k+' -- curl kubi');cmd('kubectl exec -n monitoring '+k+' -- curl kubi.default');cmd('kubectl apply -f kubi-netpol.yaml');cmd('kubectl exec -n monitoring '+k+' -- curl kubi.default')},
+rbac:()=>{cmd('kubectl create serviceaccount kubo-watch -n monitoring');cmd('kubectl create role pod-reader --verb=get,list --resource=pods');cmd('kubectl create rolebinding kubo-watch --role=pod-reader --serviceaccount=monitoring:kubo-watch');cmd('kubectl auth can-i get pods --as=system:serviceaccount:monitoring:kubo-watch');cmd('kubectl auth can-i get secrets --as=system:serviceaccount:monitoring:kubo-watch');cmd('kubectl set serviceaccount daemonset/kubo kubo-watch -n monitoring');T(3)},
 tf:()=>{cmd('kubectl config get-contexts');cmd('kubectl apply -f kubi-app.yaml');cmd('cat main.tf');cmd('terraform init');cmd('terraform apply');cmd('yes');cmd('argocd cluster list');cmd('cat kubi-app.yaml');cmd('kubectl apply -f kubi-app.yaml --context mgmt');T(8);cmd('kubectl get applications -n argocd --context mgmt');cmd('argocd app list');cmd('kubectl get pods --context cluster-b')},
 skew:()=>{cmd('kubectl drain node-1 --ignore-daemonsets');for(let i=0;i<40&&E('!!S.drainN');i++)T(1);T(3);cmd('kubectl get pods');const pp=first("p=>p.st==='Pending'");if(pp)cmd('kubectl describe pod '+pp);cmd('cat kubi-spread-fix.yaml');cmd('kubectl apply -f kubi-spread-fix.yaml');T(60);cmd('kubectl uncordon node-1');T(5)},
 scan:()=>{cmd('trivy image kubi:v3');cmd('trivy image kubi:v3.1');cmd('kubectl set image deployment/kubi kubi='+E('DIG'));T(60)},
 decl:()=>{cmd('kubectl diff -f kubi.yaml');cmd('kubectl apply -f kubi.yaml');T(60)}};
+  plan.meet = () => {
+    const d = w.document;
+    if (!d.getElementById('mGo').hidden) d.getElementById('mGo').click();
+    for (let i = 0; i < 7; i++) {
+      d.querySelector('.quiz button[data-k="1"]').click();
+      d.querySelector('.quiz .qnext').click();
+    }
+  };
+  plan.meet2 = plan.meet;
+  plan.meet3 = plan.meet;
   plan.auto = () => {
     cmd('kubectl create deployment kubi --image=kubi:v1'); T(4);
     cmd('kubectl scale deployment kubi --replicas=3');
     cmd('kubectl apply -f kubi-liveness-probe.yaml'); T(20);
-    cmd('kubectl expose deployment kubi --port=80');
+    cmd('kubectl expose deployment kubi --port=80 --type=LoadBalancer');
     cmd('kubectl apply -f kubi-readiness-probe.yaml'); T(30);
     cmd('kubectl set resources deployment kubi --requests=cpu=100m,memory=200Mi --limits=memory=256Mi');
     cmd('kubectl autoscale deployment kubi --min=3 --max=5 --cpu-percent=50'); T(60);
@@ -106,11 +116,11 @@ decl:()=>{cmd('kubectl diff -f kubi.yaml');cmd('kubectl apply -f kubi.yaml');T(6
   };
   plan.f4 = () => {
     cmd('kubectl apply -f kubi-secure.yaml'); T(60);
-    cmd('kubectl create namespace nursery');
-    cmd('cat kubo-daemonset.yaml');cmd('kubectl apply -f kubo-daemonset.yaml');cmd('kubectl get daemonset -n nursery'); T(3);
+    cmd('kubectl create namespace monitoring');
+    cmd('cat kubo-daemonset.yaml');cmd('kubectl apply -f kubo-daemonset.yaml');cmd('kubectl get daemonset -n monitoring'); T(3);
     const k = E('S.kubo.pods[0].name');
     cmd('kubectl apply -f kubi-netpol.yaml');
-    cmd(`kubectl exec -n nursery ${k} -- curl kubi.default`);
+    cmd(`kubectl exec -n monitoring ${k} -- curl kubi.default`);
     cmd('kubectl apply -f kubi-gateway.yaml'); T(5);
   };
   for (let guard = 0; guard < 40; guard++) {
@@ -123,16 +133,118 @@ decl:()=>{cmd('kubectl diff -f kubi.yaml');cmd('kubectl apply -f kubi.yaml');T(6
     if (cur() === id) assert.fail(`bloqué sur la mission ${id}\n` + term().slice(-12).join('\n'));
   }
   assert.equal(cur(), 'END');
+  if (level !== 'free') {
+    const d = w.document;
+    if (!d.getElementById('mGo').hidden) d.getElementById('mGo').click();
+    assert.match(d.getElementById('mH').textContent, /Score \d+\/100 ★/);
+  }
+  if (sf) return { E, cmd, T, w, term };
   return E('MIS.length');
 }
 
+const SF_FIX = {
+  img: 'kubectl rollout undo deployment/kubi',
+  secret: 'kubectl create secret generic kubi-secret --from-literal=password=miam',
+  mem: 'kubectl rollout undo deployment/kubi',
+  svc: 'kubectl expose deployment kubi --port=80',
+  hpa: 'kubectl autoscale deployment kubi --min=3 --max=5 --cpu-percent=50',
+  deny: 'kubectl delete networkpolicy deny-all',
+};
+
 for (const lang of ['fr', 'en']) {
-  for (const [level, missions] of [['ckad', 11], ['cka', 8], ['cks', 8], ['free', 4]]) {
+  for (const [level, missions] of [['ckad', 12], ['cka', 9], ['cks', 9], ['free', 4]]) {
     test(`[${lang}] niveau ${level} : ${missions} mission(s) jouables de bout en bout`, () => {
       assert.equal(play(level, lang), missions);
     });
   }
 }
+
+for (const lang of ['fr', 'en']) {
+  test(`[${lang}] mode Sans filet : 5 pannes réparées, SLA et score affichés`, () => {
+    const { E, cmd, T, w, term } = play('free', lang, true);
+    const doc = w.document;
+    if (!doc.getElementById('mGo').hidden) doc.getElementById('mGo').click();
+    doc.querySelector('.sfgo').click();
+    assert.ok(E('S.sf&&S.sf.list.length===5'));
+    // toutes les pannes passent au moins une fois entre les deux langues
+    E(`S.sf.list=${JSON.stringify(lang === 'fr' ? ['node', 'secret', 'mem', 'svc', 'hpa'] : ['img', 'deny', 'node', 'mem', 'secret'])}`);
+    const seen = [];
+    for (let s = 0; s < 5; s++) {
+      for (let i = 0; i < 40 && E('S.sf.ph') === 'calm'; i++) T(1);
+      const k = E('S.sf.list[S.sf.n]');
+      seen.push(k);
+      assert.equal(E('S.sf.ph'), 'fix', 'la panne ' + k + ' doit démarrer');
+      T(3);
+      assert.equal(E('S.sf.ph'), 'fix', 'la panne ' + k + ' ne doit pas se réparer toute seule');
+      if (s === 0) { doc.querySelector('.fhint button').click(); doc.querySelector('.fhint button').click(); }
+      if (lang === 'en') noFrench(w, 'sf:' + k);
+      cmd(k === 'node' ? 'kubectl uncordon ' + E('S.sf.nd') : SF_FIX[k]);
+      for (let i = 0; i < 60 && E('S.sf.ph') === 'fix'; i++) T(1);
+      assert.notEqual(E('S.sf.ph'), 'fix', `panne ${k} non réparée\n` + term().slice(-10).join('\n'));
+    }
+    assert.equal(new Set(seen).size, 5);
+    assert.ok(E('S.sf.end'));
+    assert.equal(E('S.sf.pen'), 7);
+    assert.match(doc.getElementById('sla').textContent, /SLA \d+[.,]\d/);
+    assert.match(doc.getElementById('mT').textContent, /★/);
+    if (lang === 'en') noFrench(w, 'sf:end');
+  });
+}
+
+test('chaque mission renvoie vers la doc officielle, dans la langue du joueur', () => {
+  for (const lang of ['fr', 'en']) {
+    for (const level of ['ckad', 'cka', 'cks', 'free']) {
+      const { E, w } = boot(level, lang);
+      const n = E('MIS.length');
+      for (let i = 0; i < n; i++) {
+        E(`S.recap=0;S.mi=${i};showMis()`);
+        const a = w.document.querySelector('#mV a');
+        assert.ok(a, `pas de lien doc pour ${level}/${E('MIS[S.mi].id')}`);
+        assert.match(a.href, /^https:\/\/(kubernetes\.io|argo-cd\.readthedocs\.io)\//);
+        if (lang === 'en') assert.doesNotMatch(a.href, /\/fr\//);
+      }
+    }
+  }
+  const { E, w } = boot('ckad', 'fr');
+  E('S.recap=0;S.mi=0;showMis()');
+  assert.equal(w.document.querySelector('#mV a').href, 'https://kubernetes.io/fr/docs/concepts/workloads/controllers/deployment/');
+  assert.match(w.document.getElementById('mS').textContent, /L’histoire de Kubi/);
+  assert.match(w.document.getElementById('mH').textContent, /mot à mot/);
+});
+
+test('Léa compte les commandes et réagit aux coupures', () => {
+  const { E, cmd, T, term } = boot('ckad', 'fr');
+  cmd('kubectl create deployment kubi --image=kubi:v1'); T(6);
+  E('S.mi=MIS.length-1;S.recap=0'); cmd('kubectl scale deployment kubi --replicas=3'); T(8);
+  cmd('kubectl expose deployment kubi --port=80 --type=LoadBalancer'); T(30);
+  assert.ok(E('S.shop.ok') > 0);
+  assert.match(term().join('\n'), /Première commande/);
+  cmd('kubectl delete svc kubi'); T(12);
+  assert.match(term().join('\n'), /ne répond plus/);
+  assert.ok(E('S.shop.lost') >= 0);
+  cmd('kubectl expose deployment kubi --port=80 --type=LoadBalancer'); T(3);
+  assert.match(term().join('\n'), /Ça remarche/);
+});
+
+test('les clients n’entrent que par une entrée publique (LoadBalancer ou Gateway)', () => {
+  const { E, cmd, T, term } = boot('ckad', 'fr');
+  cmd('kubectl create deployment kubi --image=kubi:v1');
+  E('S.mi=MIS.length-1;S.recap=0'); cmd('kubectl scale deployment kubi --replicas=3'); T(8);
+  cmd('kubectl expose deployment kubi --port=80'); T(20);
+  assert.equal(E('pub()'), false);
+  assert.equal(E('S.slaOn||false'), false);
+  assert.match(term().join('\n'), /porte intérieure/);
+  cmd('kubectl delete svc kubi');
+  cmd('kubectl expose deployment kubi --port=80 --type=LoadBalancer'); T(20);
+  assert.equal(E('pub()'), true);
+  cmd('kubectl get svc');
+  assert.match(term().join('\n'), /LoadBalancer   10\.96\.0\.42   203\.0\.113\.20/);
+  const g = boot('cks', 'fr');
+  assert.equal(g.E('S.lb'), true);
+  g.cmd('kubectl apply -f kubi-gateway.yaml');
+  assert.equal(g.E('S.lb'), false);
+  assert.equal(g.E('pub()'), true);
+});
 
 test('la langue suit le #fr / #en et le bouton propose l’autre langue', () => {
   const fr = boot('ckad', 'fr'), en = boot('ckad', 'en');
@@ -140,7 +252,7 @@ test('la langue suit le #fr / #en et le bouton propose l’autre langue', () => 
   assert.equal(en.w.document.documentElement.lang, 'en');
   assert.equal(fr.w.document.getElementById('lang').textContent, 'English');
   assert.equal(en.w.document.getElementById('lang').textContent, 'Français');
-  assert.equal(en.w.document.getElementById('lv1').textContent, 'Beginner');
+  assert.equal(en.w.document.getElementById('lv1').textContent, 'Discovery');
   assert.equal(en.E('MIS[0].t'), 'Hatch Kubi');
 });
 
@@ -151,7 +263,7 @@ test('version anglaise : plus aucune phrase française à l’écran', () => {
   const body = w.document.body.cloneNode(true);
   body.querySelectorAll('script, template, #lang').forEach((n) => n.remove());
   body.querySelectorAll('details').forEach((d) => d.setAttribute('open', ''));
-  const text = body.textContent + [...w.document.querySelectorAll('[aria-label]')].map((n) => n.getAttribute('aria-label')).join(' ');
+  const text = (body.textContent + [...w.document.querySelectorAll('[aria-label]')].map((n) => n.getAttribute('aria-label')).join(' ')).replace(/Léa/g, 'Lea');
   const fr = /[àâçéèêëîïôûùœ«»]|\b(le|la|les|une|des|est|pour|avec|sans|dans|puis|tu|ton|qui)\b/gi;
   assert.deepEqual([...new Set(text.match(fr) || [])], [], 'texte français dans la version anglaise');
 });
@@ -193,7 +305,7 @@ test('garde-manger : sans mot de passe, les nouveaux Kubi plantent ; sans Secret
   cmd('kubectl set env deployment/kubi --from=secret/kubi-secret'); T(20);
   assert.ok(E('done()'), 'avec le Secret, le rollout doit aboutir');
   cmd('kubectl delete secret kubi-secret');
-  cmd(`kubectl delete pod ${E('S.pods[0].name')}`); T(4);
+  cmd(`kubectl delete pod ${E("S.pods.find(p=>p.st!=='Evicted').name")}`); T(4);
   assert.ok(E("S.pods.some(p=>p.st==='CreateContainerConfigError')"));
   cmd('kubectl create secret generic kubi-secret --from-literal=password=miam'); T(6);
   assert.ok(!E("S.pods.some(p=>p.st==='CreateContainerConfigError')"), 'le pod doit repartir quand le Secret revient');
@@ -205,7 +317,7 @@ test('Kubo est un DaemonSet : un pod par œuf, qui reste pendant un drain', () =
   cmd('kubectl drain node-1 --ignore-daemonsets');
   for (let i = 0; i < 60 && E('!!S.drainN'); i++) T(1);
   assert.ok(E("S.kubo.pods.some(p=>p.node==='node-1')"), 'le Kubo de node-1 doit rester');
-  assert.match(term().join('\n'), /ignoring DaemonSet-managed Pods: kube-system\/kube-proxy, nursery\/kubo-/);
-  cmd('kubectl create deployment kubo --image=kubo:v1 -n nursery');
+  assert.match(term().join('\n'), /ignoring DaemonSet-managed Pods: kube-system\/kube-proxy, monitoring\/kubo-/);
+  cmd('kubectl create deployment kubo --image=kubo:v1 -n monitoring');
   assert.match(term().join('\n'), /DaemonSet/);
 });
