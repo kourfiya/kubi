@@ -100,6 +100,9 @@ summary{cursor:pointer;padding:4px 0}
 #err{font-size:13px;color:var(--text-danger);min-height:18px;margin-top:4px}
 .foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--text-secondary)}
 .foot button{font-size:12px;padding:6px 10px}
+.foot .credit{margin-left:auto;color:var(--text-secondary);text-decoration:none;white-space:nowrap}
+.foot .credit b{font-weight:600;color:var(--text-primary)}
+.foot .credit:hover,.foot .credit:focus-visible{color:var(--text-accent);text-decoration:underline}
 .lvl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
 .lvl button{font-size:12px;padding:6px 14px;border-radius:999px}
 .lvl button[aria-pressed="true"]{background:var(--text-primary);color:var(--surface-0);border-color:var(--text-primary)}
@@ -171,7 +174,7 @@ summary{cursor:pointer;padding:4px 0}
   <button type="button" onclick="run()">Lancer</button>
 </div>
 <div id="err"></div>
-<div class="foot"><button type="button" id="reset">Recommencer</button><button type="button" id="lang" lang="en">English</button><span>La progression est gardée dans ce navigateur.</span></div>
+<div class="foot"><button type="button" id="reset">Recommencer</button><button type="button" id="lang" lang="en">English</button><span>La progression est gardée dans ce navigateur.</span><a class="credit" href="https://www.linkedin.com/in/kourfiya-cisse/" target="_blank" rel="noopener">Créé par <b>Kourfiya CISSE</b> · LinkedIn ↗</a></div>
 </main>
 <script>
 const $=id=>document.getElementById(id);

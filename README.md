@@ -60,3 +60,7 @@ npm test         # replays every level end to end, in French and in English,
 1. Create a branch from `main` (`feat/…`, `fix/…`).
 2. Open a Pull Request: CI runs lint and tests.
 3. Once reviewed and merged, the game is published to GitHub Pages automatically.
+
+## License
+
+[MIT](LICENSE) © 2026 Kourfiya CISSE
