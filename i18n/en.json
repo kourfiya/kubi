@@ -943,6 +943,7 @@
   "La progression est gardée dans ce navigateur.": "Progress is saved in this browser.",
   "<button type=\"button\" id=\"lang\" lang=\"en\">English</button>": "<button type=\"button\" id=\"lang\" lang=\"fr\">Français</button>",
   "aria-label=\"Revoir Kubi\"": "aria-label=\"Back to Kubi\"",
-  "<button type=\"button\" id=\"lv1\" data-l=\"ckad\">Découverte</button>": "<button type=\"button\" id=\"lv1\" data-l=\"ckad\">Discovery</button>"
+  "<button type=\"button\" id=\"lv1\" data-l=\"ckad\">Découverte</button>": "<button type=\"button\" id=\"lv1\" data-l=\"ckad\">Discovery</button>",
+  ">Créé par <b>Kourfiya CISSE</b> · LinkedIn ↗<": ">Made by <b>Kourfiya CISSE</b> · LinkedIn ↗<"
  }
 }
